@@ -65,7 +65,7 @@ const getPosts = async (req, res) => {
     const totalPages = Math.ceil(totalPosts / limit) || 1;
 
     let posts = await Post.find(query)
-      .populate('userId', 'name email')
+      .populate('userId', 'name email username avatar')
       .sort(sortOption)
       .skip(startIndex)
       .limit(limit);
@@ -76,7 +76,7 @@ const getPosts = async (req, res) => {
       return {
         ...p,
         authorName: p.userId ? p.userId.name : (p.authorName || 'Anonymous'),
-        authorUsername: p.userId ? p.userId.email.split('@')[0] : (p.authorUsername || 'user')
+        authorUsername: p.userId ? (p.userId.username || p.userId.email.split('@')[0]) : (p.authorUsername || 'user')
       };
     });
 
@@ -112,13 +112,16 @@ const createPost = async (req, res) => {
       });
     }
 
+    const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
+    const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
+
     if (!getIsConnected()) {
       const newPost = {
         _id: 'post_' + Date.now(),
         userId: req.user._id,
         authorName: req.user.name,
-        authorUsername: req.user.email ? req.user.email.split('@')[0] : 'user',
-        authorAvatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`,
+        authorUsername: username,
+        authorAvatar: userAvatar,
         authorBadge: 'Legend',
         authorBadgeLevel: 7,
         text: text || '',
@@ -138,20 +141,24 @@ const createPost = async (req, res) => {
 
     const post = await Post.create({
       userId: req.user._id,
+      authorName: req.user.name,
+      authorUsername: username,
+      authorAvatar: userAvatar,
       text: text || '',
       image: image || '',
       likes: [],
       comments: []
     });
 
-    const populatedPost = await Post.findById(post._id).populate('userId', 'name email');
+    const populatedPost = await Post.findById(post._id).populate('userId', 'name email username avatar');
 
     res.status(201).json({
       success: true,
       post: {
         ...populatedPost.toObject(),
         authorName: req.user.name,
-        authorUsername: req.user.email.split('@')[0]
+        authorUsername: username,
+        authorAvatar: userAvatar
       }
     });
   } catch (error) {
@@ -165,6 +172,8 @@ const createPost = async (req, res) => {
 // @access  Private
 const toggleLikePost = async (req, res) => {
   try {
+    const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
+
     if (!getIsConnected()) {
       const post = memoryPosts.find(p => p._id.toString() === req.params.id.toString());
       if (!post) {
@@ -172,13 +181,17 @@ const toggleLikePost = async (req, res) => {
       }
 
       const existingIndex = post.likes.findIndex(
-        id => id.toString() === req.user._id.toString() || (id.userId && id.userId.toString() === req.user._id.toString())
+        l => (l.userId && l.userId.toString() === req.user._id.toString()) || l.toString() === req.user._id.toString() || l.username === username
       );
 
       if (existingIndex !== -1) {
         post.likes.splice(existingIndex, 1);
       } else {
-        post.likes.push(req.user._id);
+        post.likes.push({
+          userId: req.user._id,
+          username: username,
+          name: req.user.name
+        });
       }
 
       return res.json({
@@ -196,13 +209,17 @@ const toggleLikePost = async (req, res) => {
     }
 
     const alreadyLikedIndex = post.likes.findIndex(
-      (userId) => userId.toString() === req.user._id.toString()
+      (like) => (like.userId && like.userId.toString() === req.user._id.toString()) || like.toString() === req.user._id.toString()
     );
 
     if (alreadyLikedIndex !== -1) {
       post.likes.splice(alreadyLikedIndex, 1);
     } else {
-      post.likes.push(req.user._id);
+      post.likes.push({
+        userId: req.user._id,
+        username: username,
+        name: req.user.name
+      });
     }
 
     await post.save();
@@ -230,6 +247,9 @@ const addComment = async (req, res) => {
       return res.status(400).json({ success: false, message: 'Comment text cannot be empty' });
     }
 
+    const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
+    const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
+
     if (!getIsConnected()) {
       const post = memoryPosts.find(p => p._id.toString() === req.params.id.toString());
       if (!post) {
@@ -240,6 +260,8 @@ const addComment = async (req, res) => {
         _id: 'cmt_' + Date.now(),
         userId: req.user._id,
         name: req.user.name,
+        username: username,
+        userAvatar: userAvatar,
         text: text.trim(),
         createdAt: new Date()
       };
@@ -262,6 +284,8 @@ const addComment = async (req, res) => {
     const newComment = {
       userId: req.user._id,
       name: req.user.name,
+      username: username,
+      userAvatar: userAvatar,
       text: text.trim(),
       createdAt: new Date()
     };
