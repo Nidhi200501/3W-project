@@ -37,7 +37,35 @@ const seedMemoryData = async () => {
       createdAt: new Date(Date.now() - 600000)
     };
 
-    memoryUsers.push(user1, user2);
+    const user3 = {
+      _id: 'mem_user_3',
+      name: 'Test User',
+      username: 'testuser123',
+      email: 'testuser123@example.com',
+      password: hashedPassword,
+      badge: 'Legend',
+      badgeLevel: 7,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser123',
+      points: 100,
+      balance: 0.00,
+      createdAt: new Date()
+    };
+
+    const user4 = {
+      _id: 'mem_user_4',
+      name: 'Demo Account',
+      username: 'demouser',
+      email: 'demo@example.com',
+      password: hashedPassword,
+      badge: 'Diamond',
+      badgeLevel: 5,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demouser',
+      points: 250,
+      balance: 15.50,
+      createdAt: new Date()
+    };
+
+    memoryUsers.push(user1, user2, user3, user4);
 
     memoryPosts.push(
       {

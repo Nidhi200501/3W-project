@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { X, User, Mail, Lock, UserPlus, LogIn } from 'lucide-react';
+import { X, User, Mail, Lock, UserPlus, LogIn, Zap } from 'lucide-react';
 
 const AuthModal = ({ isOpen, onClose }) => {
   const { login, register } = useContext(AuthContext);
@@ -8,8 +8,8 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('testuser123@example.com');
+  const [password, setPassword] = useState('password123');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -33,7 +33,21 @@ const AuthModal = ({ isOpen, onClose }) => {
     if (res && res.success) {
       onClose();
     } else {
-      setErrorMsg(res?.message || 'Authentication failed');
+      setErrorMsg(res?.message || 'Authentication failed. Check your email & password.');
+    }
+  };
+
+  const handleQuickDemo = async () => {
+    setEmail('testuser123@example.com');
+    setPassword('password123');
+    setLoading(true);
+    setErrorMsg('');
+    const res = await login('testuser123@example.com', 'password123');
+    setLoading(false);
+    if (res && res.success) {
+      onClose();
+    } else {
+      setErrorMsg(res?.message || 'Demo login failed');
     }
   };
 
@@ -79,7 +93,7 @@ const AuthModal = ({ isOpen, onClose }) => {
         </button>
 
         {/* Title */}
-        <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+        <div style={{ textAlign: 'center', marginBottom: '20px' }}>
           <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: 'var(--text-main)', marginBottom: '4px' }}>
             {isRegister ? 'Create Account' : 'Welcome Back'}
           </h2>
@@ -87,6 +101,33 @@ const AuthModal = ({ isOpen, onClose }) => {
             {isRegister ? 'Join TaskPlanet Social Community' : 'Log in to start posting & interacting'}
           </p>
         </div>
+
+        {/* Quick Demo Login Banner Button */}
+        {!isRegister && (
+          <button
+            type="button"
+            onClick={handleQuickDemo}
+            style={{
+              width: '100%',
+              backgroundColor: 'rgba(0, 136, 255, 0.15)',
+              border: '1px solid var(--accent-blue)',
+              color: 'var(--text-main)',
+              borderRadius: '12px',
+              padding: '10px',
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '16px',
+              transition: 'all 0.2s ease'
+            }}
+          >
+            <Zap size={16} fill="#0088ff" color="#0088ff" /> 1-Click Demo Login (testuser123)
+          </button>
+        )}
 
         {errorMsg && (
           <div style={{

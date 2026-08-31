@@ -3,14 +3,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
-import { Mail, Lock, LogIn, ArrowLeft } from 'lucide-react';
+import { Mail, Lock, LogIn, ArrowLeft, Zap } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState('testuser123@example.com');
+  const [password, setPassword] = useState('password123');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -26,6 +26,20 @@ const Login = () => {
       navigate('/social');
     } else {
       setErrorMsg(res?.message || 'Login failed. Please check your credentials.');
+    }
+  };
+
+  const handleQuickDemo = async () => {
+    setEmail('testuser123@example.com');
+    setPassword('password123');
+    setLoading(true);
+    setErrorMsg('');
+    const res = await login('testuser123@example.com', 'password123');
+    setLoading(false);
+    if (res && res.success) {
+      navigate('/social');
+    } else {
+      setErrorMsg(res?.message || 'Demo login failed');
     }
   };
 
@@ -61,6 +75,30 @@ const Login = () => {
               Log in to start posting, liking, and commenting
             </p>
           </div>
+
+          {/* Quick Demo Login Button */}
+          <button
+            type="button"
+            onClick={handleQuickDemo}
+            style={{
+              width: '100%',
+              backgroundColor: 'rgba(0, 136, 255, 0.15)',
+              border: '1px solid var(--primary-blue)',
+              color: 'var(--text-dark)',
+              borderRadius: '12px',
+              padding: '10px',
+              fontSize: '0.85rem',
+              fontWeight: '700',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '8px',
+              marginBottom: '16px'
+            }}
+          >
+            <Zap size={16} fill="#0088ff" color="#0088ff" /> 1-Click Demo Login (testuser123)
+          </button>
 
           {errorMsg && (
             <div style={{
