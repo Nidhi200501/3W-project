@@ -1,11 +1,9 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Configure Axios Base URL from environment variable
-const API_URL = import.meta.env.VITE_API_URL || '';
-if (API_URL) {
-  axios.defaults.baseURL = API_URL;
-}
+// Configure Axios Base URL from environment variable with fallback to localhost:5000
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+axios.defaults.baseURL = API_URL;
 
 export const AuthContext = createContext();
 
@@ -57,6 +55,7 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       }
     } catch (err) {
+      console.error('Login error:', err);
       return {
         success: false,
         message: err.response?.data?.message || 'Login failed. Please check your credentials.'
@@ -76,6 +75,7 @@ export const AuthProvider = ({ children }) => {
         return { success: true };
       }
     } catch (err) {
+      console.error('Registration error:', err);
       return {
         success: false,
         message: err.response?.data?.message || 'Registration failed. Please try again.'
