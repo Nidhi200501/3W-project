@@ -8,8 +8,8 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('testuser123@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('np1805689@gmail.com');
+  const [password, setPassword] = useState('indu1989');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -38,11 +38,11 @@ const AuthModal = ({ isOpen, onClose }) => {
   };
 
   const handleQuickDemo = async () => {
-    setEmail('testuser123@example.com');
-    setPassword('password123');
+    setEmail('np1805689@gmail.com');
+    setPassword('indu1989');
     setLoading(true);
     setErrorMsg('');
-    const res = await login('testuser123@example.com', 'password123');
+    const res = await login('np1805689@gmail.com', 'indu1989');
     setLoading(false);
     if (res && res.success) {
       onClose();
@@ -125,7 +125,7 @@ const AuthModal = ({ isOpen, onClose }) => {
               transition: 'all 0.2s ease'
             }}
           >
-            <Zap size={16} fill="#0088ff" color="#0088ff" /> 1-Click Demo Login (testuser123)
+            <Zap size={16} fill="#0088ff" color="#0088ff" /> ⚡ 1-Click Login (np1805689@gmail.com)
           </button>
         )}
 
@@ -160,7 +160,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                 <User size={18} color="var(--accent-blue)" />
                 <input
                   type="text"
-                  placeholder="Full Name (e.g. Nitin Pandey)"
+                  placeholder="Full Name (e.g. Nidhi Pandey)"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -188,7 +188,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                 <User size={18} color="var(--accent-blue)" />
                 <input
                   type="text"
-                  placeholder="Username (e.g. nitin3w)"
+                  placeholder="Username (e.g. np1805689)"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -246,7 +246,7 @@ const AuthModal = ({ isOpen, onClose }) => {
             <Lock size={18} color="var(--accent-blue)" />
             <input
               type="password"
-              placeholder="Password (min 6 characters)"
+              placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required

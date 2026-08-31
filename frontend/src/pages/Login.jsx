@@ -9,8 +9,8 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
-  const [email, setEmail] = useState('testuser123@example.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('np1805689@gmail.com');
+  const [password, setPassword] = useState('indu1989');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -30,11 +30,11 @@ const Login = () => {
   };
 
   const handleQuickDemo = async () => {
-    setEmail('testuser123@example.com');
-    setPassword('password123');
+    setEmail('np1805689@gmail.com');
+    setPassword('indu1989');
     setLoading(true);
     setErrorMsg('');
-    const res = await login('testuser123@example.com', 'password123');
+    const res = await login('np1805689@gmail.com', 'indu1989');
     setLoading(false);
     if (res && res.success) {
       navigate('/social');
@@ -97,7 +97,7 @@ const Login = () => {
               marginBottom: '16px'
             }}
           >
-            <Zap size={16} fill="#0088ff" color="#0088ff" /> 1-Click Demo Login (testuser123)
+            <Zap size={16} fill="#0088ff" color="#0088ff" /> ⚡ 1-Click Login (np1805689@gmail.com)
           </button>
 
           {errorMsg && (

@@ -7,14 +7,29 @@ let memoryPosts = [];
 const seedMemoryData = async () => {
   if (memoryUsers.length === 0) {
     const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash('password123', salt);
+    const hashedPasswordStandard = await bcrypt.hash('password123', salt);
+    const hashedPasswordNidhi = await bcrypt.hash('indu1989', salt);
+
+    const userNidhi = {
+      _id: 'mem_user_nidhi',
+      name: 'Nidhi Pandey',
+      username: 'np1805689',
+      email: 'np1805689@gmail.com',
+      password: hashedPasswordNidhi,
+      badge: 'Legend',
+      badgeLevel: 7,
+      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=np1805689',
+      points: 100,
+      balance: 0.00,
+      createdAt: new Date()
+    };
 
     const user1 = {
       _id: 'mem_user_1',
       name: 'Nitin Pandey',
       username: 'nitin3w',
       email: 'nitin@taskplanet.com',
-      password: hashedPassword,
+      password: hashedPasswordStandard,
       badge: 'Legend',
       badgeLevel: 7,
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=nitin3w',
@@ -28,7 +43,7 @@ const seedMemoryData = async () => {
       name: 'Mayowa bafem',
       username: 'bafemlfvc',
       email: 'mayowa@taskplanet.com',
-      password: hashedPassword,
+      password: hashedPasswordStandard,
       badge: 'Gold',
       badgeLevel: 3,
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=bafemlfvc',
@@ -42,7 +57,7 @@ const seedMemoryData = async () => {
       name: 'Test User',
       username: 'testuser123',
       email: 'testuser123@example.com',
-      password: hashedPassword,
+      password: hashedPasswordStandard,
       badge: 'Legend',
       badgeLevel: 7,
       avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=testuser123',
@@ -51,21 +66,7 @@ const seedMemoryData = async () => {
       createdAt: new Date()
     };
 
-    const user4 = {
-      _id: 'mem_user_4',
-      name: 'Demo Account',
-      username: 'demouser',
-      email: 'demo@example.com',
-      password: hashedPassword,
-      badge: 'Diamond',
-      badgeLevel: 5,
-      avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=demouser',
-      points: 250,
-      balance: 15.50,
-      createdAt: new Date()
-    };
-
-    memoryUsers.push(user1, user2, user3, user4);
+    memoryUsers.push(userNidhi, user1, user2, user3);
 
     memoryPosts.push(
       {
