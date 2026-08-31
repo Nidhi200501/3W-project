@@ -24,12 +24,63 @@ const registerUser = async (req, res) => {
     const cleanUsername = (username || name.toLowerCase().replace(/\s+/g, '')).trim().toLowerCase();
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check if user exists in memoryUsers first
-    const memoryUserExists = memoryUsers.find(
+    // 1. PRIMARY AUTHORITATIVE MONGODB FLOW
+    if (getIsConnected()) {
+      const userExists = await User.findOne({
+        $or: [{ email: cleanEmail }, { username: cleanUsername }]
+      });
+
+      if (userExists) {
+        const field = userExists.email === cleanEmail ? 'Email' : 'Username';
+        return res.status(400).json({ success: false, message: `${field} already registered` });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      const hashedPassword = await bcrypt.hash(password, salt);
+      const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
+
+      const user = await User.create({
+        name,
+        username: cleanUsername,
+        email: cleanEmail,
+        password: hashedPassword,
+        badge: 'Legend',
+        badgeLevel: 7,
+        avatar: avatarUrl,
+        points: 100,
+        balance: 0.00
+      });
+
+      const token = generateToken(user._id);
+
+      return res.status(201).json({
+        success: true,
+        token,
+        user: {
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          badge: user.badge,
+          badgeLevel: user.badgeLevel,
+          avatar: user.avatar,
+          points: user.points,
+          balance: user.balance
+        }
+      });
+    }
+
+    // 2. PRODUCTION STRICT CHECK (No memory fallback in production)
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
+    }
+
+    // 3. LOCAL OFFLINE DEVELOPMENT FALLBACK ONLY
+    const userExists = memoryUsers.find(
       u => u.email === cleanEmail || u.username === cleanUsername
     );
 
-    if (memoryUserExists) {
+    if (userExists) {
       return res.status(400).json({ success: false, message: 'Email or Username already registered' });
     }
 
@@ -37,8 +88,7 @@ const registerUser = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, salt);
     const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
 
-    // Always create in memoryStore to ensure instant availability
-    const newMemoryUser = {
+    const newUser = {
       _id: 'user_' + Date.now(),
       name,
       username: cleanUsername,
@@ -51,56 +101,10 @@ const registerUser = async (req, res) => {
       balance: 0.00,
       createdAt: new Date()
     };
-    memoryUsers.push(newMemoryUser);
 
-    // If MongoDB is connected, also create in MongoDB database
-    if (getIsConnected()) {
-      try {
-        const mongoUserExists = await User.findOne({
-          $or: [{ email: cleanEmail }, { username: cleanUsername }]
-        });
-
-        if (mongoUserExists) {
-          const field = mongoUserExists.email === cleanEmail ? 'Email' : 'Username';
-          return res.status(400).json({ success: false, message: `${field} already registered` });
-        }
-
-        const mongoUser = await User.create({
-          name,
-          username: cleanUsername,
-          email: cleanEmail,
-          password: hashedPassword,
-          badge: 'Legend',
-          badgeLevel: 7,
-          avatar: avatarUrl,
-          points: 100,
-          balance: 0.00
-        });
-
-        const token = generateToken(mongoUser._id);
-        return res.status(201).json({
-          success: true,
-          token,
-          user: {
-            _id: mongoUser._id,
-            name: mongoUser.name,
-            username: mongoUser.username,
-            email: mongoUser.email,
-            badge: mongoUser.badge,
-            badgeLevel: mongoUser.badgeLevel,
-            avatar: mongoUser.avatar,
-            points: mongoUser.points,
-            balance: mongoUser.balance
-          }
-        });
-      } catch (dbErr) {
-        console.warn('MongoDB User save warning, falling back to memoryUser:', dbErr.message);
-      }
-    }
-
-    // Return in-memory created user
-    const token = generateToken(newMemoryUser._id);
-    const { password: _, ...userData } = newMemoryUser;
+    memoryUsers.push(newUser);
+    const token = generateToken(newUser._id);
+    const { password: _, ...userData } = newUser;
 
     return res.status(201).json({
       success: true,
@@ -127,63 +131,66 @@ const loginUser = async (req, res) => {
 
     const cleanIdentifier = loginIdentifier.trim().toLowerCase();
 
-    let targetUser = null;
-    let isMatch = false;
-
-    // 1. Check MongoDB first if connected
+    // 1. PRIMARY AUTHORITATIVE MONGODB FLOW
     if (getIsConnected()) {
-      try {
-        const mongoUser = await User.findOne({
-          $or: [{ email: cleanIdentifier }, { username: cleanIdentifier }]
-        }).select('+password');
+      const user = await User.findOne({
+        $or: [{ email: cleanIdentifier }, { username: cleanIdentifier }]
+      }).select('+password');
 
-        if (mongoUser) {
-          isMatch = await bcrypt.compare(password, mongoUser.password);
-          if (isMatch) {
-            targetUser = {
-              _id: mongoUser._id,
-              name: mongoUser.name,
-              username: mongoUser.username,
-              email: mongoUser.email,
-              badge: mongoUser.badge,
-              badgeLevel: mongoUser.badgeLevel,
-              avatar: mongoUser.avatar,
-              points: mongoUser.points,
-              balance: mongoUser.balance
-            };
-          }
-        }
-      } catch (dbErr) {
-        console.warn('MongoDB Login check warning:', dbErr.message);
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
-    }
 
-    // 2. Fallback to memoryUsers if not matched in MongoDB
-    if (!targetUser) {
-      const memoryUser = memoryUsers.find(
-        u => u.email === cleanIdentifier || u.username === cleanIdentifier
-      );
-
-      if (memoryUser) {
-        isMatch = await bcrypt.compare(password, memoryUser.password);
-        if (isMatch) {
-          const { password: _, ...userData } = memoryUser;
-          targetUser = userData;
-        }
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
+
+      const token = generateToken(user._id);
+
+      return res.json({
+        success: true,
+        token,
+        user: {
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          badge: user.badge,
+          badgeLevel: user.badgeLevel,
+          avatar: user.avatar,
+          points: user.points,
+          balance: user.balance
+        }
+      });
     }
 
-    // 3. Reject if no user matched or password failed
-    if (!targetUser) {
-      return res.status(401).json({ success: false, message: 'Invalid email/username or password' });
+    // 2. PRODUCTION STRICT CHECK (No memory fallback in production)
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
     }
 
-    const token = generateToken(targetUser._id);
+    // 3. LOCAL OFFLINE DEVELOPMENT FALLBACK ONLY
+    const user = memoryUsers.find(
+      u => u.email === cleanIdentifier || u.username === cleanIdentifier
+    );
+
+    if (!user) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+    }
+
+    const token = generateToken(user._id);
+    const { password: _, ...userData } = user;
 
     return res.json({
       success: true,
       token,
-      user: targetUser
+      user: userData
     });
   } catch (error) {
     console.error('Login Error:', error);
@@ -197,12 +204,15 @@ const loginUser = async (req, res) => {
 const getMe = async (req, res) => {
   try {
     if (getIsConnected()) {
-      try {
-        const mongoUser = await User.findById(req.user._id);
-        if (mongoUser) {
-          return res.json({ success: true, user: mongoUser });
-        }
-      } catch (dbErr) {}
+      const user = await User.findById(req.user._id);
+      if (user) {
+        return res.json({ success: true, user });
+      }
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+
+    if (process.env.NODE_ENV === 'production') {
+      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
     }
 
     const memoryUser = memoryUsers.find(u => u._id.toString() === req.user._id.toString());
