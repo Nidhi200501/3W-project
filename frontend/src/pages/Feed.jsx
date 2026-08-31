@@ -69,7 +69,9 @@ const Feed = () => {
     try {
       const res = await axios.post('/api/posts', postData);
       if (res.data.success) {
+        // Optimistically update UI and fetch fresh page 1 feed to synchronize pagination metadata
         setPosts((prev) => [res.data.post, ...prev]);
+        await fetchPosts(1, activeFilter, searchVal);
         return { success: true };
       }
     } catch (err) {

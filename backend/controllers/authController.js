@@ -10,15 +10,18 @@ const generateToken = (id) => {
   });
 };
 
+// @desc    Register new user
+// @route   POST /api/auth/register (or /api/auth/signup)
+// @access  Public
 const registerUser = async (req, res) => {
   try {
     const { name, username, email, password } = req.body;
 
-    if (!name || !username || !email || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide all required fields' });
+    if (!name || !email || !password) {
+      return res.status(400).json({ success: false, message: 'Please provide all required fields (Name, Email, Password)' });
     }
 
-    const cleanUsername = username.trim().toLowerCase().replace(/\s+/g, '');
+    const cleanUsername = (username || name.toLowerCase().replace(/\s+/g, '')).trim().toLowerCase();
     const cleanEmail = email.trim().toLowerCase();
 
     // In-memory fallback if MongoDB is not connected
@@ -109,28 +112,33 @@ const registerUser = async (req, res) => {
   }
 };
 
+// @desc    Authenticate user & get token
+// @route   POST /api/auth/login
+// @access  Public
 const loginUser = async (req, res) => {
   try {
-    const { loginIdentifier, password } = req.body;
+    const loginIdentifier = req.body.loginIdentifier || req.body.email || req.body.username;
+    const password = req.body.password;
 
     if (!loginIdentifier || !password) {
-      return res.status(400).json({ success: false, message: 'Please provide credentials' });
+      return res.status(400).json({ success: false, message: 'Please provide Email/Username and Password' });
     }
 
     const cleanIdentifier = loginIdentifier.trim().toLowerCase();
 
+    // In-memory fallback if MongoDB is not connected
     if (!getIsConnected()) {
       const user = memoryUsers.find(
         u => u.email === cleanIdentifier || u.username === cleanIdentifier
       );
 
       if (!user) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.status(401).json({ success: false, message: 'Invalid credentials' });
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
 
       const token = generateToken(user._id);
@@ -143,17 +151,18 @@ const loginUser = async (req, res) => {
       });
     }
 
+    // Mongoose MongoDB Flow
     const user = await User.findOne({
       $or: [{ email: cleanIdentifier }, { username: cleanIdentifier }]
     }).select('+password');
 
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const token = generateToken(user._id);
@@ -179,6 +188,9 @@ const loginUser = async (req, res) => {
   }
 };
 
+// @desc    Get current user profile
+// @route   GET /api/auth/me
+// @access  Private
 const getMe = async (req, res) => {
   try {
     if (!getIsConnected()) {
