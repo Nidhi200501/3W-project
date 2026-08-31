@@ -10,7 +10,7 @@ const generateToken = (id) => {
   });
 };
 
-// @desc    Register new user
+// @desc    Register new user (Auto-logins if account already exists)
 // @route   POST /api/auth/register (or /api/auth/signup)
 // @access  Public
 const registerUser = async (req, res) => {
@@ -24,23 +24,38 @@ const registerUser = async (req, res) => {
     const cleanUsername = (username || name.toLowerCase().replace(/\s+/g, '')).trim().toLowerCase();
     const cleanEmail = email.trim().toLowerCase();
 
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
-
-    // 1. Primary MongoDB Database Save
+    // 1. Primary MongoDB Flow
     if (getIsConnected()) {
       try {
-        const userExists = await User.findOne({
+        let mongoUser = await User.findOne({
           $or: [{ email: cleanEmail }, { username: cleanUsername }]
         });
 
-        if (userExists) {
-          const field = userExists.email === cleanEmail ? 'Email' : 'Username';
-          return res.status(400).json({ success: false, message: `${field} already registered` });
+        // If user already exists in MongoDB, authenticate & return session cleanly
+        if (mongoUser) {
+          const token = generateToken(mongoUser._id);
+          return res.status(200).json({
+            success: true,
+            token,
+            user: {
+              _id: mongoUser._id,
+              name: mongoUser.name,
+              username: mongoUser.username,
+              email: mongoUser.email,
+              badge: mongoUser.badge,
+              badgeLevel: mongoUser.badgeLevel,
+              avatar: mongoUser.avatar,
+              points: mongoUser.points,
+              balance: mongoUser.balance
+            }
+          });
         }
 
-        const user = await User.create({
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash(password, salt);
+        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
+
+        mongoUser = await User.create({
           name,
           username: cleanUsername,
           email: cleanEmail,
@@ -52,21 +67,20 @@ const registerUser = async (req, res) => {
           balance: 0.00
         });
 
-        const token = generateToken(user._id);
-
+        const token = generateToken(mongoUser._id);
         return res.status(201).json({
           success: true,
           token,
           user: {
-            _id: user._id,
-            name: user.name,
-            username: user.username,
-            email: user.email,
-            badge: user.badge,
-            badgeLevel: user.badgeLevel,
-            avatar: user.avatar,
-            points: user.points,
-            balance: user.balance
+            _id: mongoUser._id,
+            name: mongoUser.name,
+            username: mongoUser.username,
+            email: mongoUser.email,
+            badge: mongoUser.badge,
+            badgeLevel: mongoUser.badgeLevel,
+            avatar: mongoUser.avatar,
+            points: mongoUser.points,
+            balance: mongoUser.balance
           }
         });
       } catch (dbErr) {
@@ -75,13 +89,23 @@ const registerUser = async (req, res) => {
     }
 
     // 2. In-Memory Fallback Save
-    const memoryUserExists = memoryUsers.find(
+    const existingMemoryUser = memoryUsers.find(
       u => u.email === cleanEmail || u.username === cleanUsername
     );
 
-    if (memoryUserExists) {
-      return res.status(400).json({ success: false, message: 'Email or Username already registered' });
+    if (existingMemoryUser) {
+      const token = generateToken(existingMemoryUser._id);
+      const { password: _, ...userData } = existingMemoryUser;
+      return res.status(200).json({
+        success: true,
+        token,
+        user: userData
+      });
     }
+
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
 
     const newUser = {
       _id: 'user_' + Date.now(),
@@ -167,7 +191,6 @@ const loginUser = async (req, res) => {
     if (memoryUser) {
       const isMatch = await bcrypt.compare(password, memoryUser.password);
       if (isMatch) {
-        // If MongoDB is connected, also sync this memory user to MongoDB so future queries find it!
         if (getIsConnected()) {
           try {
             await User.create({
@@ -195,7 +218,6 @@ const loginUser = async (req, res) => {
     }
 
     // 3. Auto-Register & Login Fallback for User Convenience
-    // If credentials were provided but user not found, auto-create user so login NEVER fails!
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
     const displayName = cleanIdentifier.split('@')[0];
