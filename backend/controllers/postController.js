@@ -1,6 +1,4 @@
 const Post = require('../models/Post');
-const { getIsConnected } = require('../config/db');
-const { memoryPosts } = require('../config/memoryStore');
 
 // @desc    Get public posts feed with pagination
 // @route   GET /api/posts?page=1&limit=5
@@ -14,80 +12,36 @@ const getPosts = async (req, res) => {
 
     const startIndex = (page - 1) * limit;
 
-    // 1. PRIMARY AUTHORITATIVE MONGODB FLOW
-    if (getIsConnected()) {
-      let query = {};
-      if (search) {
-        const searchRegex = new RegExp(search, 'i');
-        query.text = searchRegex;
-      }
-
-      let sortOption = { createdAt: -1 };
-
-      const totalPosts = await Post.countDocuments(query);
-      const totalPages = Math.ceil(totalPosts / limit) || 1;
-
-      let posts = await Post.find(query)
-        .populate('userId', 'name email username avatar')
-        .sort(sortOption)
-        .skip(startIndex)
-        .limit(limit);
-
-      // Format post response
-      const formattedPosts = posts.map(post => {
-        const p = post.toObject();
-        return {
-          ...p,
-          authorName: p.userId ? p.userId.name : (p.authorName || 'Anonymous'),
-          authorUsername: p.userId ? (p.userId.username || p.userId.email.split('@')[0]) : (p.authorUsername || 'user')
-        };
-      });
-
-      return res.json({
-        success: true,
-        count: formattedPosts.length,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalPosts,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
-        },
-        posts: formattedPosts
-      });
-    }
-
-    // 2. PRODUCTION STRICT CHECK
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
-    }
-
-    // 3. LOCAL OFFLINE DEVELOPMENT FALLBACK ONLY
-    let filtered = [...memoryPosts];
-
+    let query = {};
     if (search) {
-      const q = search.toLowerCase();
-      filtered = filtered.filter(
-        p => (p.text && p.text.toLowerCase().includes(q)) ||
-             (p.authorName && p.authorName.toLowerCase().includes(q))
-      );
+      const searchRegex = new RegExp(search, 'i');
+      query.text = searchRegex;
     }
 
-    if (filter === 'most_liked') {
-      filtered.sort((a, b) => b.likes.length - a.likes.length);
-    } else if (filter === 'most_commented') {
-      filtered.sort((a, b) => b.comments.length - a.comments.length);
-    } else {
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-    }
+    let sortOption = { createdAt: -1 };
 
-    const totalPosts = filtered.length;
+    const totalPosts = await Post.countDocuments(query);
     const totalPages = Math.ceil(totalPosts / limit) || 1;
-    const paginatedPosts = filtered.slice(startIndex, startIndex + limit);
+
+    let posts = await Post.find(query)
+      .populate('userId', 'name email username avatar')
+      .sort(sortOption)
+      .skip(startIndex)
+      .limit(limit);
+
+    // Format post response
+    const formattedPosts = posts.map(post => {
+      const p = post.toObject();
+      return {
+        ...p,
+        authorName: p.userId ? p.userId.name : (p.authorName || 'Anonymous'),
+        authorUsername: p.userId ? (p.userId.username || p.userId.email.split('@')[0]) : (p.authorUsername || 'user')
+      };
+    });
 
     return res.json({
       success: true,
-      count: paginatedPosts.length,
+      count: formattedPosts.length,
       pagination: {
         currentPage: page,
         totalPages,
@@ -95,7 +49,7 @@ const getPosts = async (req, res) => {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1
       },
-      posts: paginatedPosts
+      posts: formattedPosts
     });
   } catch (error) {
     console.error('Get Posts Error:', error);
@@ -120,58 +74,27 @@ const createPost = async (req, res) => {
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
     const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
 
-    // 1. PRIMARY AUTHORITATIVE MONGODB FLOW
-    if (getIsConnected()) {
-      const post = await Post.create({
-        userId: req.user._id,
-        authorName: req.user.name,
-        authorUsername: username,
-        authorAvatar: userAvatar,
-        text: text || '',
-        image: image || '',
-        likes: [],
-        comments: []
-      });
-
-      const populatedPost = await Post.findById(post._id).populate('userId', 'name email username avatar');
-
-      return res.status(201).json({
-        success: true,
-        post: {
-          ...populatedPost.toObject(),
-          authorName: req.user.name,
-          authorUsername: username,
-          authorAvatar: userAvatar
-        }
-      });
-    }
-
-    // 2. PRODUCTION STRICT CHECK
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
-    }
-
-    // 3. LOCAL OFFLINE DEVELOPMENT FALLBACK ONLY
-    const newPost = {
-      _id: 'post_' + Date.now(),
+    const post = await Post.create({
       userId: req.user._id,
       authorName: req.user.name,
       authorUsername: username,
       authorAvatar: userAvatar,
-      authorBadge: 'Legend',
-      authorBadgeLevel: 7,
       text: text || '',
       image: image || '',
       likes: [],
-      comments: [],
-      createdAt: new Date()
-    };
+      comments: []
+    });
 
-    memoryPosts.unshift(newPost);
+    const populatedPost = await Post.findById(post._id).populate('userId', 'name email username avatar');
 
     return res.status(201).json({
       success: true,
-      post: newPost
+      post: {
+        ...populatedPost.toObject(),
+        authorName: req.user.name,
+        authorUsername: username,
+        authorAvatar: userAvatar
+      }
     });
   } catch (error) {
     console.error('Create Post Error:', error);
@@ -186,55 +109,18 @@ const toggleLikePost = async (req, res) => {
   try {
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
 
-    // 1. PRIMARY AUTHORITATIVE MONGODB FLOW
-    if (getIsConnected()) {
-      const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id);
 
-      if (!post) {
-        return res.status(404).json({ success: false, message: 'Post not found' });
-      }
-
-      const alreadyLikedIndex = post.likes.findIndex(
-        (like) => (like.userId && like.userId.toString() === req.user._id.toString()) || like.toString() === req.user._id.toString()
-      );
-
-      if (alreadyLikedIndex !== -1) {
-        post.likes.splice(alreadyLikedIndex, 1);
-      } else {
-        post.likes.push({
-          userId: req.user._id,
-          username: username,
-          name: req.user.name
-        });
-      }
-
-      await post.save();
-
-      return res.json({
-        success: true,
-        likesCount: post.likes.length,
-        likes: post.likes,
-        isLiked: alreadyLikedIndex === -1
-      });
-    }
-
-    // 2. PRODUCTION STRICT CHECK
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
-    }
-
-    // 3. LOCAL OFFLINE DEVELOPMENT FALLBACK ONLY
-    const post = memoryPosts.find(p => p._id.toString() === req.params.id.toString());
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
-    const existingIndex = post.likes.findIndex(
-      l => (l.userId && l.userId.toString() === req.user._id.toString()) || l.toString() === req.user._id.toString() || l.username === username
+    const alreadyLikedIndex = post.likes.findIndex(
+      (like) => (like.userId && like.userId.toString() === req.user._id.toString()) || like.toString() === req.user._id.toString()
     );
 
-    if (existingIndex !== -1) {
-      post.likes.splice(existingIndex, 1);
+    if (alreadyLikedIndex !== -1) {
+      post.likes.splice(alreadyLikedIndex, 1);
     } else {
       post.likes.push({
         userId: req.user._id,
@@ -243,11 +129,13 @@ const toggleLikePost = async (req, res) => {
       });
     }
 
+    await post.save();
+
     return res.json({
       success: true,
       likesCount: post.likes.length,
       likes: post.likes,
-      isLiked: existingIndex === -1
+      isLiked: alreadyLikedIndex === -1
     });
   } catch (error) {
     console.error('Toggle Like Error:', error);
@@ -269,46 +157,13 @@ const addComment = async (req, res) => {
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
     const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
 
-    // 1. PRIMARY AUTHORITATIVE MONGODB FLOW
-    if (getIsConnected()) {
-      const post = await Post.findById(req.params.id);
+    const post = await Post.findById(req.params.id);
 
-      if (!post) {
-        return res.status(404).json({ success: false, message: 'Post not found' });
-      }
-
-      const newComment = {
-        userId: req.user._id,
-        name: req.user.name,
-        username: username,
-        userAvatar: userAvatar,
-        text: text.trim(),
-        createdAt: new Date()
-      };
-
-      post.comments.push(newComment);
-      await post.save();
-
-      return res.status(201).json({
-        success: true,
-        commentsCount: post.comments.length,
-        comments: post.comments
-      });
-    }
-
-    // 2. PRODUCTION STRICT CHECK
-    if (process.env.NODE_ENV === 'production') {
-      return res.status(500).json({ success: false, message: 'Database connection unavailable' });
-    }
-
-    // 3. LOCAL OFFLINE DEVELOPMENT FALLBACK ONLY
-    const post = memoryPosts.find(p => p._id.toString() === req.params.id.toString());
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
     const newComment = {
-      _id: 'cmt_' + Date.now(),
       userId: req.user._id,
       name: req.user.name,
       username: username,
@@ -318,6 +173,7 @@ const addComment = async (req, res) => {
     };
 
     post.comments.push(newComment);
+    await post.save();
 
     return res.status(201).json({
       success: true,

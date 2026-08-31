@@ -4,18 +4,17 @@ let isConnected = false;
 
 const connectDB = async () => {
   try {
-    // 2.5s connection timeout so server falls back gracefully to in-memory mode if local MongoDB is not running
     const conn = await mongoose.connect(
-      process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskplanet_social',
-      {
-        serverSelectionTimeoutMS: 2500
-      }
+      process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskplanet_social'
     );
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     isConnected = true;
   } catch (error) {
-    console.warn(`MongoDB Not Connected (${error.message}). Running in Self-Contained In-Memory Mode.`);
+    console.error(`MongoDB Connection Error: ${error.message}`);
     isConnected = false;
+    if (process.env.NODE_ENV === 'production') {
+      process.exit(1);
+    }
   }
 };
 
