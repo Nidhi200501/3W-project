@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { AuthContext } from '../context/AuthContext';
-import { X, User, Mail, Lock, UserPlus, LogIn, Zap } from 'lucide-react';
+import { X, User, Mail, Lock, UserPlus, LogIn } from 'lucide-react';
 
 const AuthModal = ({ isOpen, onClose }) => {
   const { login, register } = useContext(AuthContext);
@@ -8,8 +8,8 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('np1805689@gmail.com');
-  const [password, setPassword] = useState('indu1989');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
 
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -31,23 +31,13 @@ const AuthModal = ({ isOpen, onClose }) => {
     setLoading(false);
 
     if (res && res.success) {
+      setEmail('');
+      setPassword('');
+      setName('');
+      setUsername('');
       onClose();
     } else {
       setErrorMsg(res?.message || 'Authentication failed. Check your email & password.');
-    }
-  };
-
-  const handleQuickDemo = async () => {
-    setEmail('np1805689@gmail.com');
-    setPassword('indu1989');
-    setLoading(true);
-    setErrorMsg('');
-    const res = await login('np1805689@gmail.com', 'indu1989');
-    setLoading(false);
-    if (res && res.success) {
-      onClose();
-    } else {
-      setErrorMsg(res?.message || 'Demo login failed');
     }
   };
 
@@ -102,33 +92,6 @@ const AuthModal = ({ isOpen, onClose }) => {
           </p>
         </div>
 
-        {/* Quick Demo Login Banner Button */}
-        {!isRegister && (
-          <button
-            type="button"
-            onClick={handleQuickDemo}
-            style={{
-              width: '100%',
-              backgroundColor: 'rgba(0, 136, 255, 0.15)',
-              border: '1px solid var(--accent-blue)',
-              color: 'var(--text-main)',
-              borderRadius: '12px',
-              padding: '10px',
-              fontSize: '0.85rem',
-              fontWeight: '700',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '8px',
-              marginBottom: '16px',
-              transition: 'all 0.2s ease'
-            }}
-          >
-            <Zap size={16} fill="#0088ff" color="#0088ff" /> ⚡ 1-Click Login (np1805689@gmail.com)
-          </button>
-        )}
-
         {errorMsg && (
           <div style={{
             backgroundColor: 'rgba(255, 59, 48, 0.1)',
@@ -160,7 +123,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                 <User size={18} color="var(--accent-blue)" />
                 <input
                   type="text"
-                  placeholder="Full Name (e.g. Nidhi Pandey)"
+                  placeholder="Full Name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   required
@@ -188,7 +151,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                 <User size={18} color="var(--accent-blue)" />
                 <input
                   type="text"
-                  placeholder="Username (e.g. np1805689)"
+                  placeholder="Username"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -269,7 +232,7 @@ const AuthModal = ({ isOpen, onClose }) => {
             style={{ width: '100%', padding: '12px', borderRadius: '12px', marginTop: '6px' }}
           >
             {loading ? 'Please wait...' : isRegister ? (
-              <><UserPlus size={18} /> Register</>
+              <><UserPlus size={18} /> Sign Up</>
             ) : (
               <><LogIn size={18} /> Login</>
             )}
