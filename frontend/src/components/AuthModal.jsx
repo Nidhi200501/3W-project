@@ -339,7 +339,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                 <Lock size={18} color="var(--accent-blue)" />
                 <input
                   type="password"
-                  placeholder="Password"
+                  placeholder="Password (min 6 characters)"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -353,6 +353,29 @@ const AuthModal = ({ isOpen, onClose }) => {
                   }}
                 />
               </div>
+
+              {/* Password Strength Indicator */}
+              {password && (
+                <div style={{ marginTop: '-6px', marginBottom: '4px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.75rem', marginBottom: '4px' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Password Strength:</span>
+                    <span style={{
+                      fontWeight: '800',
+                      color: password.length < 6 ? '#ff453a' : (password.length >= 8 && /[A-Z0-9]/i.test(password) ? '#00e676' : '#ffca3a')
+                    }}>
+                      {password.length < 6 ? '🔴 Weak (min 6 chars)' : (password.length >= 8 && /[A-Z0-9]/i.test(password) ? '🟢 Strong' : '🟡 Medium')}
+                    </span>
+                  </div>
+                  <div style={{ height: '4px', width: '100%', backgroundColor: 'rgba(255,255,255,0.1)', borderRadius: '2px', overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%',
+                      width: password.length < 6 ? '33%' : (password.length >= 8 && /[A-Z0-9]/i.test(password) ? '100%' : '66%'),
+                      backgroundColor: password.length < 6 ? '#ff453a' : (password.length >= 8 && /[A-Z0-9]/i.test(password) ? '#00e676' : '#ffca3a'),
+                      transition: 'all 0.3s ease'
+                    }} />
+                  </div>
+                </div>
+              )}
 
               {/* Submit Button */}
               <button
