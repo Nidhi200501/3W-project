@@ -1,5 +1,8 @@
 const mongoose = require('mongoose');
 
+// Disable Mongoose command buffering when disconnected so queries fail fast with clear errors
+mongoose.set('bufferCommands', false);
+
 const connectDB = async () => {
   try {
     const mongoUri = process.env.MONGODB_URI || process.env.MONGO_URI;
@@ -18,4 +21,3 @@ const connectDB = async () => {
 };
 
 module.exports = { connectDB };
-

@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 
 const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || 'your_secure_random_secret_here', {
+  return jwt.sign({ id }, process.env.JWT_SECRET || 'taskplanet_super_secret_jwt_key_2026_3w', {
     expiresIn: '30d'
   });
 };

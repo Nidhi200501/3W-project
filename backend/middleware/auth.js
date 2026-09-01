@@ -12,18 +12,23 @@ const protect = async (req, res, next) => {
       token = req.headers.authorization.split(' ')[1];
       const decoded = jwt.verify(
         token,
-        process.env.JWT_SECRET || 'your_secure_random_secret_here'
+        process.env.JWT_SECRET || 'taskplanet_super_secret_jwt_key_2026_3w'
       );
 
-      req.user = await User.findById(decoded.id).select('-password');
-      if (!req.user) {
-        return res.status(401).json({ success: false, message: 'User not found in MongoDB Atlas' });
+      let user = await User.findById(decoded.id).select('-password');
+      if (!user) {
+        user = await User.findOne({ _id: decoded.id }).select('-password');
       }
 
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'User not found' });
+      }
+
+      req.user = user;
       return next();
     } catch (error) {
       console.error('Auth error:', error.message);
-      return res.status(401).json({ success: false, message: 'Not authorized, token failed' });
+      return res.status(401).json({ success: false, message: `Not authorized, token failed: ${error.message}` });
     }
   }
 
