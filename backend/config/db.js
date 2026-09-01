@@ -9,7 +9,7 @@ const connectDB = async () => {
   try {
     const conn = await mongoose.connect(
       process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://127.0.0.1:27017/taskplanet_social',
-      { serverSelectionTimeoutMS: 3000 }
+      { serverSelectionTimeoutMS: 10000 }
     );
     console.log(`MongoDB Connected: ${conn.connection.host}`);
     isConnected = true;
@@ -19,7 +19,7 @@ const connectDB = async () => {
   }
 };
 
-const getIsConnected = () => isConnected;
+const getIsConnected = () => isConnected || mongoose.connection.readyState === 1;
 
 module.exports = { connectDB, getIsConnected };
 

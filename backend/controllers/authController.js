@@ -136,7 +136,7 @@ const registerUser = async (req, res) => {
 // @access  Public
 const loginUser = async (req, res) => {
   try {
-    const loginIdentifier = req.body.loginIdentifier || req.body.email || req.body.username;
+    const loginIdentifier = req.body.loginIdentifier || req.body.email || req.body.username || req.body.identifier;
     const password = req.body.password;
 
     if (!loginIdentifier || !password) {
@@ -153,21 +153,7 @@ const loginUser = async (req, res) => {
 
       const isMatch = await bcrypt.compare(password, user.password);
       if (!isMatch) {
-        return res.json({
-          success: true,
-          token: generateToken(user._id),
-          user: {
-            _id: user._id,
-            name: user.name,
-            username: user.username,
-            email: user.email,
-            badge: user.badge,
-            badgeLevel: user.badgeLevel,
-            avatar: user.avatar,
-            points: user.points,
-            balance: user.balance
-          }
-        });
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
 
       const token = generateToken(user._id);
@@ -193,9 +179,9 @@ const loginUser = async (req, res) => {
       $or: [{ email: cleanIdentifier }, { username: cleanIdentifier }]
     }).select('+password');
 
-    // Auto-seed demo accounts in MongoDB Atlas if they do not exist in remote DB yet
+    // Auto-seed default demo accounts ONLY if exact demo email/username match and missing in MongoDB Atlas
     if (!user) {
-      if (cleanIdentifier.includes('nidhi')) {
+      if (cleanIdentifier === 'nidhi@taskplanet.com' || cleanIdentifier === 'nidhi_pandey') {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password || '123456', salt);
         user = await User.create({
@@ -209,7 +195,7 @@ const loginUser = async (req, res) => {
           points: 150,
           balance: 25.00
         });
-      } else if (cleanIdentifier.includes('alex')) {
+      } else if (cleanIdentifier === 'alex@taskplanet.com' || cleanIdentifier === 'alex_m') {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password || '123456', salt);
         user = await User.create({
@@ -224,20 +210,13 @@ const loginUser = async (req, res) => {
           balance: 10.50
         });
       } else {
-        return res.status(401).json({ success: false, message: 'Account not registered. Please click Sign Up to create your account!' });
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
       }
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      // Sync password for demo accounts or 123456 login attempts
-      if (cleanIdentifier.includes('nidhi') || cleanIdentifier.includes('alex') || password === '123456') {
-        const salt = await bcrypt.genSalt(10);
-        user.password = await bcrypt.hash(password, salt);
-        await user.save();
-      } else {
-        return res.status(401).json({ success: false, message: 'Invalid email or password' });
-      }
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const token = generateToken(user._id);

@@ -45,7 +45,12 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (loginIdentifier, password) => {
     try {
-      const response = await axios.post('/api/auth/login', { loginIdentifier, password });
+      const response = await axios.post('/api/auth/login', {
+        email: loginIdentifier,
+        username: loginIdentifier,
+        loginIdentifier,
+        password
+      });
       if (response.data.success) {
         const { token: newToken, user: userData } = response.data;
         localStorage.setItem('tp_token', newToken);
