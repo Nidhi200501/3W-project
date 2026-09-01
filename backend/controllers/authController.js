@@ -156,12 +156,43 @@ const loginUser = async (req, res) => {
     }
 
     // MongoDB connection active
-    const user = await User.findOne({
+    let user = await User.findOne({
       $or: [{ email: cleanIdentifier }, { username: cleanIdentifier }]
     }).select('+password');
 
+    // Auto-seed demo accounts in MongoDB Atlas if they do not exist in remote DB yet
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      if (cleanIdentifier === 'nidhi@taskplanet.com' || cleanIdentifier === 'nidhi_pandey' || cleanIdentifier === 'nidhi') {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('123456', salt);
+        user = await User.create({
+          name: 'Nidhi Pandey',
+          username: 'nidhi_pandey',
+          email: 'nidhi@taskplanet.com',
+          password: hashedPassword,
+          badge: 'Legend',
+          badgeLevel: 7,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80',
+          points: 150,
+          balance: 25.00
+        });
+      } else if (cleanIdentifier === 'alex@taskplanet.com' || cleanIdentifier === 'alex_m' || cleanIdentifier === 'alex') {
+        const salt = await bcrypt.genSalt(10);
+        const hashedPassword = await bcrypt.hash('123456', salt);
+        user = await User.create({
+          name: 'Alex Morgan',
+          username: 'alex_m',
+          email: 'alex@taskplanet.com',
+          password: hashedPassword,
+          badge: 'Diamond',
+          badgeLevel: 5,
+          avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?auto=format&fit=crop&w=200&q=80',
+          points: 120,
+          balance: 10.50
+        });
+      } else {
+        return res.status(401).json({ success: false, message: 'Account not registered. Please click Sign Up to create your account!' });
+      }
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
