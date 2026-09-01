@@ -1,18 +1,20 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AuthContext } from '../context/AuthContext';
-import Header from '../components/Header';
+import NavbarHeader from '../components/NavbarHeader';
 import BottomNav from '../components/BottomNav';
-import { Globe, Trophy, ClipboardList, Rocket, ArrowRight, UserPlus, LogIn, Star } from 'lucide-react';
+import AuthModal from '../components/AuthModal';
+import { Globe, Trophy, ArrowRight, UserPlus, Star } from 'lucide-react';
 
 const Home = () => {
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   return (
-    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-page)', paddingBottom: '80px' }}>
+    <div style={{ minHeight: '100vh', backgroundColor: 'var(--bg-primary)', paddingBottom: '80px' }}>
       {/* Top Header */}
-      <Header onOpenAuth={() => navigate('/login')} onGoToFeed={() => navigate('/social')} />
+      <NavbarHeader onOpenAuth={() => setIsAuthModalOpen(true)} />
 
       <main style={{ maxWidth: '600px', margin: '0 auto', padding: '20px 16px' }}>
         {/* Welcome Banner Card */}
@@ -52,7 +54,7 @@ const Home = () => {
 
             <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
               <button
-                onClick={() => navigate('/social')}
+                onClick={() => navigate('/')}
                 style={{
                   backgroundColor: '#ffffff',
                   color: '#0066cc',
@@ -73,7 +75,7 @@ const Home = () => {
 
               {!user && (
                 <button
-                  onClick={() => navigate('/register')}
+                  onClick={() => setIsAuthModalOpen(true)}
                   style={{
                     backgroundColor: 'rgba(255, 255, 255, 0.15)',
                     color: '#ffffff',
@@ -88,7 +90,7 @@ const Home = () => {
                     gap: '6px'
                   }}
                 >
-                  <UserPlus size={16} /> Create Account
+                  <UserPlus size={16} /> Create Account / Login
                 </button>
               )}
             </div>
@@ -96,15 +98,15 @@ const Home = () => {
         </div>
 
         {/* Feature Cards Section */}
-        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-dark)', marginBottom: '14px' }}>
+        <h3 style={{ fontSize: '1.1rem', fontWeight: '700', color: 'var(--text-main)', marginBottom: '14px' }}>
           Explore TaskPlanet Hub
         </h3>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '24px' }}>
           {/* Social Card */}
           <div
-            onClick={() => navigate('/social')}
-            className="post-card-box"
+            onClick={() => navigate('/')}
+            className="card-box"
             style={{ margin: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '10px' }}
           >
             <div style={{
@@ -120,7 +122,7 @@ const Home = () => {
               <Globe size={22} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-dark)' }}>Social Feed</h4>
+              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>Social Feed</h4>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                 Post text, images, like & comment.
               </p>
@@ -129,8 +131,8 @@ const Home = () => {
 
           {/* Leaderboard Card */}
           <div
-            onClick={() => navigate('/social')}
-            className="post-card-box"
+            onClick={() => navigate('/')}
+            className="card-box"
             style={{ margin: 0, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: '10px' }}
           >
             <div style={{
@@ -146,7 +148,7 @@ const Home = () => {
               <Trophy size={22} />
             </div>
             <div>
-              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-dark)' }}>Leaderboard</h4>
+              <h4 style={{ fontSize: '1rem', fontWeight: '700', color: 'var(--text-main)' }}>Leaderboard</h4>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginTop: '4px' }}>
                 Track top active earners & badges.
               </p>
@@ -157,6 +159,12 @@ const Home = () => {
 
       {/* Sticky Bottom Navigation */}
       <BottomNav />
+
+      {/* Auth Modal */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+      />
     </div>
   );
 };
