@@ -10,7 +10,7 @@ const Login = () => {
   const navigate = useNavigate();
   const { login } = useContext(AuthContext);
 
-  const [email, setEmail] = useState('np1805689@gmail.com');
+  const [email, setEmail] = useState('nidhi@taskplanet.com');
   const [password, setPassword] = useState('123456');
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
@@ -153,7 +153,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => {
-                  setEmail('np1805689@gmail.com');
+                  setEmail('nidhi@taskplanet.com');
                   setPassword('123456');
                 }}
                 style={{

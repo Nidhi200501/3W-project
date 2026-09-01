@@ -8,7 +8,7 @@ const AuthModal = ({ isOpen, onClose }) => {
 
   const [name, setName] = useState('');
   const [username, setUsername] = useState('');
-  const [email, setEmail] = useState('np1805689@gmail.com');
+  const [email, setEmail] = useState('nidhi@taskplanet.com');
   const [password, setPassword] = useState('123456');
 
   const [loading, setLoading] = useState(false);
@@ -402,7 +402,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                   <button
                     type="button"
                     onClick={() => {
-                      setEmail('np1805689@gmail.com');
+                      setEmail('nidhi@taskplanet.com');
                       setPassword('123456');
                     }}
                     style={{
