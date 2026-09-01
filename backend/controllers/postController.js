@@ -1,8 +1,6 @@
 const Post = require('../models/Post');
-const { getIsConnected } = require('../config/db');
-const { memoryPosts } = require('../config/memoryStore');
 
-// @desc    Get public posts feed with pagination
+// @desc    Get public posts feed from MongoDB Atlas
 // @route   GET /api/posts?page=1&limit=5
 // @access  Public
 const getPosts = async (req, res) => {
@@ -10,40 +8,6 @@ const getPosts = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
     const search = (req.query.search || '').trim().toLowerCase();
-    const filter = req.query.filter || 'all';
-
-    if (!getIsConnected()) {
-      let filtered = [...memoryPosts];
-      if (search) {
-        filtered = filtered.filter(p => p.text.toLowerCase().includes(search) || p.authorName.toLowerCase().includes(search));
-      }
-      if (filter === 'media') {
-        filtered = filtered.filter(p => p.image && p.image.length > 0);
-      } else if (filter === 'text') {
-        filtered = filtered.filter(p => !p.image || p.image.length === 0);
-      }
-
-      // Sort newest first
-      filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-
-      const totalPosts = filtered.length;
-      const totalPages = Math.ceil(totalPosts / limit) || 1;
-      const startIndex = (page - 1) * limit;
-      const paginatedPosts = filtered.slice(startIndex, startIndex + limit);
-
-      return res.json({
-        success: true,
-        count: paginatedPosts.length,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalPosts,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1
-        },
-        posts: paginatedPosts
-      });
-    }
 
     const startIndex = (page - 1) * limit;
 
@@ -92,7 +56,7 @@ const getPosts = async (req, res) => {
   }
 };
 
-// @desc    Create a new post
+// @desc    Create a new post in MongoDB Atlas
 // @route   POST /api/posts
 // @access  Private
 const createPost = async (req, res) => {
@@ -108,26 +72,6 @@ const createPost = async (req, res) => {
 
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
     const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
-
-    if (!getIsConnected()) {
-      const newPost = {
-        _id: 'mem_post_' + Date.now(),
-        userId: req.user._id,
-        authorName: req.user.name,
-        authorUsername: username,
-        authorAvatar: userAvatar,
-        text: text || '',
-        image: image || '',
-        likes: [],
-        comments: [],
-        createdAt: new Date()
-      };
-      memoryPosts.unshift(newPost);
-      return res.status(201).json({
-        success: true,
-        post: newPost
-      });
-    }
 
     const post = await Post.create({
       userId: req.user._id,
@@ -157,40 +101,12 @@ const createPost = async (req, res) => {
   }
 };
 
-// @desc    Toggle like / unlike on a post
+// @desc    Toggle like / unlike on a post in MongoDB Atlas
 // @route   POST /api/posts/:id/like
 // @access  Private
 const toggleLikePost = async (req, res) => {
   try {
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
-
-    if (!getIsConnected()) {
-      const post = memoryPosts.find(p => p._id.toString() === req.params.id.toString());
-      if (!post) {
-        return res.status(404).json({ success: false, message: 'Post not found' });
-      }
-
-      const alreadyLikedIndex = post.likes.findIndex(
-        (like) => (like.userId && like.userId.toString() === req.user._id.toString()) || like.toString() === req.user._id.toString()
-      );
-
-      if (alreadyLikedIndex !== -1) {
-        post.likes.splice(alreadyLikedIndex, 1);
-      } else {
-        post.likes.push({
-          userId: req.user._id,
-          username: username,
-          name: req.user.name
-        });
-      }
-
-      return res.json({
-        success: true,
-        likesCount: post.likes.length,
-        likes: post.likes,
-        isLiked: alreadyLikedIndex === -1
-      });
-    }
 
     const post = await Post.findById(req.params.id);
 
@@ -226,7 +142,7 @@ const toggleLikePost = async (req, res) => {
   }
 };
 
-// @desc    Add comment to a post
+// @desc    Add comment to a post in MongoDB Atlas
 // @route   POST /api/posts/:id/comment
 // @access  Private
 const addComment = async (req, res) => {
@@ -239,30 +155,6 @@ const addComment = async (req, res) => {
 
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
     const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
-
-    if (!getIsConnected()) {
-      const post = memoryPosts.find(p => p._id.toString() === req.params.id.toString());
-      if (!post) {
-        return res.status(404).json({ success: false, message: 'Post not found' });
-      }
-
-      const newComment = {
-        _id: 'mem_comm_' + Date.now(),
-        userId: req.user._id,
-        name: req.user.name,
-        username: username,
-        userAvatar: userAvatar,
-        text: text.trim(),
-        createdAt: new Date()
-      };
-
-      post.comments.push(newComment);
-      return res.status(201).json({
-        success: true,
-        commentsCount: post.comments.length,
-        comments: post.comments
-      });
-    }
 
     const post = await Post.findById(req.params.id);
 

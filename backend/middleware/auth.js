@@ -17,7 +17,7 @@ const protect = async (req, res, next) => {
 
       req.user = await User.findById(decoded.id).select('-password');
       if (!req.user) {
-        return res.status(401).json({ success: false, message: 'User not found' });
+        return res.status(401).json({ success: false, message: 'User not found in MongoDB Atlas' });
       }
 
       return next();
