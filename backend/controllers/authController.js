@@ -22,7 +22,13 @@ const registerUser = async (req, res) => {
     }
 
     const cleanUsername = (username || name.toLowerCase().replace(/\s+/g, '')).trim().toLowerCase();
-    const cleanEmail = email.trim().toLowerCase();
+    let cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail.includes('@')) {
+      cleanEmail = `${cleanEmail}@taskplanet.com`;
+    }
+    if (!cleanEmail.includes('.')) {
+      cleanEmail = `${cleanEmail}.com`;
+    }
 
     const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
     const salt = await bcrypt.genSalt(10);
