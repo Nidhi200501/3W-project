@@ -1,14 +1,17 @@
-import React from 'react';
-import { Search } from 'lucide-react';
+import React, { useContext } from 'react';
+import { Search, User } from 'lucide-react';
+import { AuthContext } from '../context/AuthContext';
 
-const SearchBar = ({ searchVal, setSearchVal, onSearchSubmit }) => {
+const SearchBar = ({ searchVal, setSearchVal, onSearchSubmit, onAvatarClick }) => {
+  const { user } = useContext(AuthContext);
+
   const handleSubmit = (e) => {
     e.preventDefault();
     onSearchSubmit();
   };
 
   return (
-    <form onSubmit={handleSubmit} style={{ padding: '0 16px 16px 16px' }}>
+    <form onSubmit={handleSubmit} style={{ padding: '16px 16px 16px 16px' }}>
       <div style={{
         display: 'flex',
         alignItems: 'center',
@@ -57,14 +60,19 @@ const SearchBar = ({ searchVal, setSearchVal, onSearchSubmit }) => {
             justifyContent: 'center',
             cursor: 'pointer',
             boxShadow: 'var(--accent-blue-glow)',
-            transition: 'transform 0.2s ease'
+            transition: 'transform 0.2s ease',
+            flexShrink: 0
           }}
+          title="Search"
         >
           <Search size={20} />
         </button>
+
       </div>
     </form>
   );
 };
 
 export default SearchBar;
+
+

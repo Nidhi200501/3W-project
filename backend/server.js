@@ -11,9 +11,22 @@ const app = express();
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// CORS configuration supporting process.env.CLIENT_URL or all origins
+// Robust CORS configuration supporting process.env.CLIENT_URL, Vercel production domain, and wildcard fallback
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'https://3-w-project-eta.vercel.app',
+  'http://localhost:3000',
+  'http://localhost:5173'
+].filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.CLIENT_URL || '*',
+  origin: (origin, callback) => {
+    if (!origin || allowedOrigins.includes(origin) || (origin && origin.endsWith('.vercel.app'))) {
+      callback(null, true);
+    } else {
+      callback(null, true); // Fallback to allow request
+    }
+  },
   credentials: true
 };
 app.use(cors(corsOptions));

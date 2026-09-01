@@ -1,6 +1,8 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { getIsConnected } = require('../config/db');
+const { memoryUsers } = require('../config/memoryStore');
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'your_secure_random_secret_here', {
@@ -22,7 +24,50 @@ const registerUser = async (req, res) => {
     const cleanUsername = (username || name.toLowerCase().replace(/\s+/g, '')).trim().toLowerCase();
     const cleanEmail = email.trim().toLowerCase();
 
-    // Check duplicate email or username
+    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    if (!getIsConnected()) {
+      const userExists = memoryUsers.find(u => u.email === cleanEmail || u.username === cleanUsername);
+      if (userExists) {
+        const field = userExists.email === cleanEmail ? 'Email' : 'Username';
+        return res.status(400).json({ success: false, message: `${field} already registered` });
+      }
+
+      const newUser = {
+        _id: 'mem_user_' + Date.now(),
+        name,
+        username: cleanUsername,
+        email: cleanEmail,
+        password: hashedPassword,
+        badge: 'Legend',
+        badgeLevel: 7,
+        avatar: avatarUrl,
+        points: 100,
+        balance: 0.00
+      };
+      memoryUsers.push(newUser);
+
+      const token = generateToken(newUser._id);
+      return res.status(201).json({
+        success: true,
+        token,
+        user: {
+          _id: newUser._id,
+          name: newUser.name,
+          username: newUser.username,
+          email: newUser.email,
+          badge: newUser.badge,
+          badgeLevel: newUser.badgeLevel,
+          avatar: newUser.avatar,
+          points: newUser.points,
+          balance: newUser.balance
+        }
+      });
+    }
+
+    // MongoDB connection active
     const userExists = await User.findOne({
       $or: [{ email: cleanEmail }, { username: cleanUsername }]
     });
@@ -31,10 +76,6 @@ const registerUser = async (req, res) => {
       const field = userExists.email === cleanEmail ? 'Email' : 'Username';
       return res.status(400).json({ success: false, message: `${field} already registered` });
     }
-
-    const salt = await bcrypt.genSalt(10);
-    const hashedPassword = await bcrypt.hash(password, salt);
-    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${cleanUsername}`;
 
     const user = await User.create({
       name,
@@ -85,6 +126,36 @@ const loginUser = async (req, res) => {
 
     const cleanIdentifier = loginIdentifier.trim().toLowerCase();
 
+    if (!getIsConnected()) {
+      const user = memoryUsers.find(u => u.email === cleanIdentifier || u.username === cleanIdentifier);
+      if (!user) {
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      }
+
+      const isMatch = await bcrypt.compare(password, user.password);
+      if (!isMatch) {
+        return res.status(401).json({ success: false, message: 'Invalid email or password' });
+      }
+
+      const token = generateToken(user._id);
+      return res.json({
+        success: true,
+        token,
+        user: {
+          _id: user._id,
+          name: user.name,
+          username: user.username,
+          email: user.email,
+          badge: user.badge,
+          badgeLevel: user.badgeLevel,
+          avatar: user.avatar,
+          points: user.points,
+          balance: user.balance
+        }
+      });
+    }
+
+    // MongoDB connection active
     const user = await User.findOne({
       $or: [{ email: cleanIdentifier }, { username: cleanIdentifier }]
     }).select('+password');
@@ -126,6 +197,15 @@ const loginUser = async (req, res) => {
 // @access  Private
 const getMe = async (req, res) => {
   try {
+    if (!getIsConnected()) {
+      const user = memoryUsers.find(u => u._id.toString() === req.user._id.toString());
+      if (user) {
+        const { password: _, ...userData } = user;
+        return res.json({ success: true, user: userData });
+      }
+      return res.json({ success: true, user: req.user });
+    }
+
     const user = await User.findById(req.user._id);
     if (user) {
       return res.json({ success: true, user });
@@ -137,3 +217,4 @@ const getMe = async (req, res) => {
 };
 
 module.exports = { registerUser, loginUser, getMe };
+

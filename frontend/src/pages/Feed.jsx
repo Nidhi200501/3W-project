@@ -98,6 +98,7 @@ const Feed = () => {
         searchVal={searchVal}
         setSearchVal={setSearchVal}
         onSearchSubmit={handleSearchSubmit}
+        onAvatarClick={() => setIsAuthModalOpen(true)}
       />
 
       {/* Create Post Section */}

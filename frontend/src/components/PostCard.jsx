@@ -114,8 +114,12 @@ const PostCard = ({ post, onOpenAuth }) => {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '12px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
           <img
-            src={post.authorAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${authorUsername}`}
+            src={post.authorAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0088ff&color=fff&bold=true`}
             alt={authorName}
+            onError={(e) => {
+              e.target.onerror = null;
+              e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(authorName)}&background=0088ff&color=fff&bold=true`;
+            }}
             style={{
               width: '42px',
               height: '42px',
@@ -342,8 +346,12 @@ const PostCard = ({ post, onOpenAuth }) => {
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
                     <img
-                      src={cmt.userAvatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${cmt.username || cmt.name}`}
+                      src={cmt.userAvatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(cmt.name || 'User')}&background=0088ff&color=fff&bold=true`}
                       alt={cmt.name}
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(cmt.name || 'User')}&background=0088ff&color=fff&bold=true`;
+                      }}
                       style={{ width: '22px', height: '22px', borderRadius: '50%', backgroundColor: 'var(--bg-card)' }}
                     />
                     <span style={{ color: 'var(--text-main)', fontWeight: '700', fontSize: '0.8rem' }}>{cmt.name}</span>

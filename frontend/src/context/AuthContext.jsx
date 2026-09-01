@@ -1,8 +1,8 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Configure Axios Base URL from environment variable with fallback to localhost:5000
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+// Configure Axios Base URL from environment variable with fallback to live Render backend URL
+const API_URL = import.meta.env.VITE_API_URL || 'https://threew-backend-hz5v.onrender.com';
 axios.defaults.baseURL = API_URL;
 
 export const AuthContext = createContext();
