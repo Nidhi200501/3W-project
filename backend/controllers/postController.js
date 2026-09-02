@@ -1,3 +1,4 @@
+const mongoose = require('mongoose');
 const Post = require('../models/Post');
 const { isDbConnected } = require('../config/db');
 const { getInMemoryPosts, createInMemoryPost } = require('../utils/inMemoryStore');
@@ -140,21 +141,52 @@ const createPost = async (req, res) => {
   }
 };
 
-// @desc    Toggle like / unlike on a post in MongoDB Atlas
+// @desc    Toggle like / unlike on a post in MongoDB Atlas or In-Memory Store
 // @route   POST /api/posts/:id/like
 // @access  Private
 const toggleLikePost = async (req, res) => {
   try {
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
+    const postId = req.params.id;
 
-    const post = await Post.findById(req.params.id);
+    // Handle in-memory posts or disconnected database safely
+    if (!isDbConnected() || String(postId).startsWith('mem_') || !mongoose.Types.ObjectId.isValid(postId)) {
+      const allMemPosts = getInMemoryPosts();
+      const memPost = allMemPosts.find(p => String(p._id) === String(postId));
+      if (!memPost) {
+        return res.status(404).json({ success: false, message: 'Post not found' });
+      }
+
+      const alreadyLikedIndex = memPost.likes.findIndex(
+        (like) => (like.userId && String(like.userId) === String(req.user._id)) || String(like) === String(req.user._id)
+      );
+
+      if (alreadyLikedIndex !== -1) {
+        memPost.likes.splice(alreadyLikedIndex, 1);
+      } else {
+        memPost.likes.push({
+          userId: req.user._id,
+          username: username,
+          name: req.user.name
+        });
+      }
+
+      return res.json({
+        success: true,
+        likesCount: memPost.likes.length,
+        likes: memPost.likes,
+        isLiked: alreadyLikedIndex === -1
+      });
+    }
+
+    const post = await Post.findById(postId);
 
     if (!post) {
       return res.status(404).json({ success: false, message: 'Post not found' });
     }
 
     const alreadyLikedIndex = post.likes.findIndex(
-      (like) => (like.userId && like.userId.toString() === req.user._id.toString()) || like.toString() === req.user._id.toString()
+      (like) => (like.userId && String(like.userId) === String(req.user._id)) || String(like) === String(req.user._id)
     );
 
     if (alreadyLikedIndex !== -1) {
@@ -181,7 +213,7 @@ const toggleLikePost = async (req, res) => {
   }
 };
 
-// @desc    Add comment to a post in MongoDB Atlas
+// @desc    Add comment to a post in MongoDB Atlas or In-Memory Store
 // @route   POST /api/posts/:id/comment
 // @access  Private
 const addComment = async (req, res) => {
@@ -194,12 +226,7 @@ const addComment = async (req, res) => {
 
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
     const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
-
-    const post = await Post.findById(req.params.id);
-
-    if (!post) {
-      return res.status(404).json({ success: false, message: 'Post not found' });
-    }
+    const postId = req.params.id;
 
     const newComment = {
       userId: req.user._id,
@@ -209,6 +236,29 @@ const addComment = async (req, res) => {
       text: text.trim(),
       createdAt: new Date()
     };
+
+    // Handle in-memory posts or disconnected database safely
+    if (!isDbConnected() || String(postId).startsWith('mem_') || !mongoose.Types.ObjectId.isValid(postId)) {
+      const allMemPosts = getInMemoryPosts();
+      const memPost = allMemPosts.find(p => String(p._id) === String(postId));
+      if (!memPost) {
+        return res.status(404).json({ success: false, message: 'Post not found' });
+      }
+
+      memPost.comments.push(newComment);
+
+      return res.status(201).json({
+        success: true,
+        commentsCount: memPost.comments.length,
+        comments: memPost.comments
+      });
+    }
+
+    const post = await Post.findById(postId);
+
+    if (!post) {
+      return res.status(404).json({ success: false, message: 'Post not found' });
+    }
 
     post.comments.push(newComment);
     await post.save();
