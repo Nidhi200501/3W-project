@@ -1,6 +1,8 @@
 const Post = require('../models/Post');
+const { isDbConnected } = require('../config/db');
+const { getInMemoryPosts, createInMemoryPost } = require('../utils/inMemoryStore');
 
-// @desc    Get public posts feed from MongoDB Atlas
+// @desc    Get public posts feed from MongoDB Atlas or In-Memory fallback
 // @route   GET /api/posts?page=1&limit=5
 // @access  Public
 const getPosts = async (req, res) => {
@@ -8,6 +10,27 @@ const getPosts = async (req, res) => {
     const page = parseInt(req.query.page, 10) || 1;
     const limit = parseInt(req.query.limit, 10) || 5;
     const search = (req.query.search || '').trim().toLowerCase();
+
+    if (!isDbConnected()) {
+      const allPosts = getInMemoryPosts(search);
+      const totalPosts = allPosts.length;
+      const totalPages = Math.ceil(totalPosts / limit) || 1;
+      const startIndex = (page - 1) * limit;
+      const paginatedPosts = allPosts.slice(startIndex, startIndex + limit);
+
+      return res.json({
+        success: true,
+        count: paginatedPosts.length,
+        pagination: {
+          currentPage: page,
+          totalPages,
+          totalPosts,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        },
+        posts: paginatedPosts
+      });
+    }
 
     const startIndex = (page - 1) * limit;
 
@@ -72,6 +95,22 @@ const createPost = async (req, res) => {
 
     const username = req.user.username || (req.user.email ? req.user.email.split('@')[0] : req.user.name.toLowerCase().replace(/\s+/g, ''));
     const userAvatar = req.user.avatar || `https://api.dicebear.com/7.x/avataaars/svg?seed=${req.user.name}`;
+
+    if (!isDbConnected()) {
+      const newMemPost = createInMemoryPost({
+        userId: req.user._id,
+        authorName: req.user.name,
+        authorUsername: username,
+        authorAvatar: userAvatar,
+        text,
+        image
+      });
+
+      return res.status(201).json({
+        success: true,
+        post: newMemPost
+      });
+    }
 
     const post = await Post.create({
       userId: req.user._id,

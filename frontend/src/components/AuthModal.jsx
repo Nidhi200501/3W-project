@@ -12,23 +12,52 @@ const AuthModal = ({ isOpen, onClose }) => {
   const [password, setPassword] = useState('123456');
 
   const [loading, setLoading] = useState(false);
+  const [slowNotice, setSlowNotice] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
   if (!isOpen) return null;
 
+  const handleToggleMode = (newRegisterMode) => {
+    setIsRegister(newRegisterMode);
+    setErrorMsg('');
+    setSlowNotice(false);
+    if (newRegisterMode) {
+      // Clear defaults for registration
+      setEmail('');
+      setPassword('');
+      setName('');
+      setUsername('');
+    } else {
+      // Set demo defaults for convenience
+      setEmail('nidhi@taskplanet.com');
+      setPassword('123456');
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setErrorMsg('');
+    setSlowNotice(false);
     setLoading(true);
 
-    let res;
-    if (isRegister) {
-      res = await register(name, username || name.toLowerCase().replace(/\s+/g, ''), email, password);
-    } else {
-      res = await login(email, password);
-    }
+    const timer = setTimeout(() => {
+      setSlowNotice(true);
+    }, 2500);
 
-    setLoading(false);
+    let res;
+    try {
+      if (isRegister) {
+        res = await register(name, username || name.toLowerCase().replace(/\s+/g, ''), email, password);
+      } else {
+        res = await login(email, password);
+      }
+    } catch (err) {
+      res = { success: false, message: 'Connection error. Please try again.' };
+    } finally {
+      clearTimeout(timer);
+      setLoading(false);
+      setSlowNotice(false);
+    }
 
     if (res && res.success) {
       setEmail('');
@@ -234,6 +263,21 @@ const AuthModal = ({ isOpen, onClose }) => {
                 textAlign: 'center'
               }}>
                 {errorMsg}
+              </div>
+            )}
+
+            {slowNotice && (
+              <div style={{
+                backgroundColor: 'rgba(0, 136, 255, 0.12)',
+                border: '1px solid rgba(0, 136, 255, 0.3)',
+                color: '#0088ff',
+                borderRadius: '10px',
+                padding: '10px',
+                fontSize: '0.82rem',
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                ⏳ Connecting to server... (this may take a few seconds on first load)
               </div>
             )}
 
@@ -447,7 +491,7 @@ const AuthModal = ({ isOpen, onClose }) => {
                 {isRegister ? 'Already have an account? ' : "Don't have an account? "}
               </span>
               <button
-                onClick={() => { setIsRegister(!isRegister); setErrorMsg(''); }}
+                onClick={() => handleToggleMode(!isRegister)}
                 style={{
                   background: 'none',
                   border: 'none',

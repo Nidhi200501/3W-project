@@ -1,8 +1,16 @@
 import React, { createContext, useState, useEffect } from 'react';
 import axios from 'axios';
 
-// Configure Axios Base URL from environment variable with fallback to live Render backend URL
-const API_URL = import.meta.env.VITE_API_URL || 'https://threew-backend-hz5v.onrender.com';
+// Helper to resolve API base URL supporting local dev & production fallback
+const getApiBaseUrl = () => {
+  if (import.meta.env.VITE_API_URL) return import.meta.env.VITE_API_URL;
+  if (typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+    return 'http://localhost:5000';
+  }
+  return 'https://threew-backend-hz5v.onrender.com';
+};
+
+const API_URL = getApiBaseUrl();
 axios.defaults.baseURL = API_URL;
 
 export const AuthContext = createContext();
@@ -34,7 +42,9 @@ export const AuthProvider = ({ children }) => {
         }
       } catch (err) {
         console.error('Failed to load user session:', err);
-        logout();
+        if (err.response && err.response.status === 401) {
+          logout();
+        }
       } finally {
         setLoading(false);
       }
